@@ -35,11 +35,11 @@ In the next versions of the datalogger will the database acts as FIFO ("rollover
 
 ### Configuration
 
-1. Clone the folder `/Service/Datalogger/data-logger.config.xml` onto you host machine
-2. Copy the folder to your PLCnext Control with e.g. WinSCP in the `/opt/plcnext/projects/`
-3. Open now the `/opt/plcnext/projects/Services/DataLogger/data-logger.config.xml` with an editor and modify the settings according to your use-case.
-4. Save the file and restart the PLCnext Control (via PLCnext Engineer or shell sudo `/etc/init.d/plcnext restart`)
-5. The log files are now available in the directory `/opt/plcnext/projects/Services/DataLogger/` and can be copied via SFTP (e.g. with WinSCP).  
+1. Clone the folder `Services` onto your host machine
+2. Copy the folder to your PLCnext Control with e.g. WinSCP into the directory `/opt/plcnext/projects/`
+3. Now open  the `/opt/plcnext/projects/Services/DataLogger/data-logger.config` with an editor and modify the settings according to your use case.
+4. Save the file and restart the PLCnext Control (via PLCnext Engineer or shell `sudo /etc/init.d/plcnext restart`)
+5. The log files will now be available in the directory `/opt/plcnext/projects/Services/DataLogger/` and can be copied via SFTP (e.g. with WinSCP).  
 All files are stored in a SQLlite format and can be used with every SQLlite compatible viewer.
 
 **Application Note:**
