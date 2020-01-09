@@ -24,7 +24,7 @@ Please follow these instructions for that:
 
 ---
 
-![IEC_Program](Picture/01_IEC_Program.png)
+![IEC_Program](/Picture/01_IEC_Program.png)
 
 •	Defining the variables
 1.	Create an IEC Program “DIO_Producer” in the „Components“ area
@@ -35,7 +35,7 @@ and “IN Port” usage for the signals
 
 ---
 
-![CyclicTask](Picture/02_CyclicTask.png)
+![CyclicTask](/Picture/02_CyclicTask.png)
 
 •	Defining a cyclic task
 1.	Open the “PLCnext” node in the „PLANT“ area 
@@ -47,7 +47,7 @@ and “IN Port” usage for the signals
 
 ---
 
-![CyclicTask](Picture/03_Synchronizing.png)
+![CyclicTask](/Picture/03_Synchronizing.png)
 
 •	Synchronizing the predefined AXIO update task with the user-defined cyclic task
 1.	Open the „Axioline F“ node in the „PLANT“ area
@@ -58,7 +58,7 @@ and “IN Port” usage for the signals
 
 ---
 
-![CyclicTask](Picture/04_Configuring_AXIO_bus.png)
+![CyclicTask](/Picture/04_Configuring_AXIO_bus.png)
 
 •	Configuring the AXIO local bus
 1.	Select the „Device List“ topic
@@ -68,7 +68,7 @@ and “IN Port” usage for the signals
 
 ---
 
-![CyclicTask](Picture/05_ConnectingDIO.png)
+![CyclicTask](/Picture/05_ConnectingDIO.png)
 
 •	Connecting the DIO data with the port variables
 1.	Open the node „PLCnext“ in the „PLANT“ area
@@ -79,7 +79,7 @@ and “IN Port” usage for the signals
 
 ---
 
-![CyclicTask](Picture/06_Download_PLCnEngProj.png)
+![CyclicTask](/Picture/06_Download_PLCnEngProj.png)
 
 •	Downloading the PLCnext Engineer Project to the PLCnext target
 1.	Open the „axc-f-2152-1“ node in the „PLANT“ area

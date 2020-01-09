@@ -59,7 +59,7 @@ Please follow these instructions for that:
 ---
 
 
-![IEC_Program](Picture/07_DataLoggerConfiguration.png)
+![IEC_Program](/Picture/07_DataLoggerConfiguration.png)
 
 •	Placing the DataLogger configuration file on the target
 1.	Open the „/DataLogger/configfile/“ directory on the host machine to find the „data-logger.config” file
@@ -72,7 +72,7 @@ Please follow these instructions for that:
 ---
 
 
-![IEC_Program](Picture/08_LogPortVariableList.png)
+![IEC_Program](/Picture/08_LogPortVariableList.png)
 
 •	Creating a Log Variable list in the „data-logger.config“ file
 1.	In the „/opt/plcnext/projects/PCWE/Plc/Gds/“ folder on the PLCnext target, open the „PCWE.gds.config“ file
@@ -87,7 +87,7 @@ Please follow these instructions for that:
 ---
 
 
-![IEC_Program](Picture/09_LocationSQLiteDB.png)
+![IEC_Program](/Picture/09_LocationSQLiteDB.png)
 
 •	Where to find the SQLite databases on the PLCnext target
 1.	Find the SQLite databases in the folder defined in „data-logger.config“ by a <Datasink> entry. The default value is "/opt/plcnext/logs/DataSink.db".
