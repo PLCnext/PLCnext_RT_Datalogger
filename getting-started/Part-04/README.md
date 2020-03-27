@@ -12,7 +12,7 @@ This article uses Eclipse IDE to implement a C ++ application to access the Data
 In the folder "src" of this article you will find the completely implemented source code. If you don't have much time to implement the code yourself, you can replace the files in your Eclipse project with files in that src folder. 
 
 
-![IEC_Program](Picture/15_ProjectOverview.png)
+![IEC_Program](/Picture/15_ProjectOverview.png)
 
 
 1. Open Eclipse IDE and create a C++ Project for PLCnext target:
@@ -225,7 +225,7 @@ In the folder "src" of this article you will find the completely implemented sou
 
 3. Include the C++ Library into PLCnext Engineer Project as showed in steps 1-4 in following picture:
 
-![IEC_Program](Picture/10_IncludeDataLoggerLibrary.png)
+![IEC_Program](/Picture/10_IncludeDataLoggerLibrary.png)
 
 4. Download and execute the PLCnEng project on the PLCnext target
 
