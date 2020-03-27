@@ -372,19 +372,19 @@ For data transmission via PROFINET, we have to implement the following additiona
 
 4. Add in PLCnext Engineer project a new program "PN_Send_Receive" with needed system and port variables as showed in steps 1-3 in following picture:
 
-![IEC_Program](Picture/11_PN_Send_Receive_Var.png)
+![IEC_Program](/Picture/11_PN_Send_Receive_Var.png)
 
 5. Add the following Code to "PN_Send_Receive" program:
 
-![IEC_Program](Picture/12_PN_Send_Receive_Code.png)
+![IEC_Program](/Picture/12_PN_Send_Receive_Code.png)
 
 6. Instantiate the "PN_Send_Receive" program:
 
-![IEC_Program](Picture/13_PN_Send_Receive_Instance.png)
+![IEC_Program](/Picture/13_PN_Send_Receive_Instance.png)
 
 7. Connect the Port variables as showed in steps 1-4:
 
-![IEC_Program](Picture/14_PN_Send_Receive_ConnectPortVariables.png)
+![IEC_Program](/Picture/14_PN_Send_Receive_ConnectPortVariables.png)
 
 8. Download and execute the PLCnEng project on the PLCnext target.
 
