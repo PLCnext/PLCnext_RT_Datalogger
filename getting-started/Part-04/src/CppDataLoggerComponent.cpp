@@ -1,16 +1,4 @@
-﻿ /******************************************************************************
- *
- *  Copyright (c) Phoenix Contact GmbH & Co. KG. All rights reserved.
- *	Licensed under the MIT. See LICENSE file in the project root for full license information.
- *
- *  CppDataLoggerComponent.cpp
- *
- *  Created on: Jun, 2019
- *      Author: Eduard Muenz
- *
- ******************************************************************************/
-
-#include "CppDataLoggerComponent.hpp"
+﻿#include "CppDataLoggerComponent.hpp"
 #include "Arp/Plc/Commons/Esm/ProgramComponentBase.hpp"
 
 namespace CppDataLogger
@@ -45,6 +33,7 @@ void CppDataLoggerComponent::ResetConfig()
     // implement this inverse to SetupConfig() and LoadConfig()
 }
 
+
 void CppDataLoggerComponent::Start(void) {
 	xStopThread = false;
 	Log::Info("[CppDataLoggerComponent]-------------------------------workerThreadInstance start");
@@ -72,7 +61,7 @@ bool CppDataLoggerComponent::Init()
 
 	bool bRet = false;
 
-	m_pDataLoggerService = ServiceManager::GetService<IDataLoggerService>();     //get IDataLoggerService
+	m_pDataLoggerService = ServiceManager::GetService<IDataLoggerService2>();     //get IDataLoggerService2
 
 		if(m_pDataLoggerService != NULL) //if IDataLoggerService is valid
 			{
@@ -84,7 +73,7 @@ bool CppDataLoggerComponent::Init()
 				//Result vector of sessions names started by DataLogger Service
 				std::vector<Arp::String> sessions;
 
-				this->m_pDataLoggerService->ListSessionNames(IDataLoggerService::ListSessionNamesResultDelegate::create([&](IRscReadEnumerator<RscString<512>> &enumerator)
+				this->m_pDataLoggerService->ListSessionNames(IDataLoggerService2::ListSessionNamesResultDelegate::create([&](IRscReadEnumerator<RscString<512>> &enumerator)
 				{
 					size_t nVariables = enumerator.BeginRead();
 					sessions.reserve(nVariables);
@@ -112,7 +101,7 @@ bool CppDataLoggerComponent::Init()
 				//Vector for Variable Names, sorted by name. This vector will be necessary in the next part of this article
 				std::vector<Arp::String> CountingVariableNames = {};
 
-				ErrorCode error = this->m_pDataLoggerService->GetLoggedVariables(sessionname, IDataLoggerService::GetLoggedVariablesInfosDelegate::create([&](IRscReadEnumerator<Arp::Plc::Gds::Services::VariableInfo> &enumerator)
+				ErrorCode error = this->m_pDataLoggerService->GetLoggedVariables(sessionname, IDataLoggerService2::GetLoggedVariablesInfosDelegate::create([&](IRscReadEnumerator<Arp::Plc::Gds::Services::VariableInfo> &enumerator)
 				{
 
 			        size_t nVariables = enumerator.BeginRead();
@@ -154,7 +143,7 @@ bool CppDataLoggerComponent::Init()
 			    std::vector<Arp::Plc::Gds::Services::RscString<512>> SessionInfos;
 
 
-			    this->m_pDataLoggerService->GetSessionNames(currentVariableName, IDataLoggerService::GetSessionNamesResultDelegate::create([&](IRscReadEnumerator<Arp::Plc::Gds::Services::RscString<512>> &enumerator)
+			    this->m_pDataLoggerService->GetSessionNames(currentVariableName, IDataLoggerService2::GetSessionNamesResultDelegate::create([&](IRscReadEnumerator<Arp::Plc::Gds::Services::RscString<512>> &enumerator)
 			    {
 			    	size_t nSessions = enumerator.BeginRead();
 			    	SessionInfos.reserve(nSessions);
@@ -190,5 +179,4 @@ void CppDataLoggerComponent::workerThreadBody(void) {
 		Init();  //Call Init() function
 	}
 }
-
 } // end of namespace CppDataLogger

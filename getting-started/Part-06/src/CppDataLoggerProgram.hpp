@@ -9,7 +9,6 @@
  *      Author: Eduard Muenz
  *
  ******************************************************************************/
-
 #pragma once
 #include "Arp/System/Core/Arp.h"
 #include "Arp/Plc/Commons/Esm/ProgramBase.hpp"
@@ -54,23 +53,25 @@ public: /* Ports
            The name comment defines the name of the port and is optional. Default is the name of the field.
         */
 
-		//#port
-		//#attributes(Output|Retain)
-		//#name(OutPortPN)
-		uint8 OutPortPN [512] = {0}; //The Port-Variable for the connection in PLCnext Engineer
+	//#port
+	//#attributes(Output|Retain)
+	//#name(OutPortPN)
+	uint8 OutPortPN [512] = {0}; //The Port-Variable for the connection in PLCnext Engineer
 
-		//#port
-		//#attributes(Output|Retain)
-		//#name(OutQueueSize)
-		uint32 QueueSize = 0;   //The Port-Variable for the connection in PLCnext Engineer
+	//#port
+	//#attributes(Output|Retain)
+	//#name(OutQueueSize)
+	uint32 QueueSize = 0;   //The Port-Variable for the connection in PLCnext Engineer
 
-		//#port
-		//#attributes(Input|Retain)
-		//#name(Cpp_Pn_Valid_Data_Cycle_In)
-		bool Cpp_Pn_Valid_Data_Cycle_In = false;   //The Port-Variable for PN-Connection Status, provided by Program in PLCnext Engineer
+	//#port
+	//#attributes(Input|Retain)
+	//#name(Cpp_Pn_Valid_Data_Cycle_In)
+	bool Cpp_Pn_Valid_Data_Cycle_In = false;   //The Port-Variable for PN-Connection Status, provided by Program in PLCnext Engineer
+
 
 private: // fields
     CppDataLogger::CppDataLoggerComponent& cppDataLoggerComponent;
+
 };
 
 ///////////////////////////////////////////////////////////////////////////////

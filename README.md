@@ -8,7 +8,7 @@ The DataLogger is a service component of the PLCnext Technology firmware that pr
 Each data set is first stored in a Ramdisk and then stored in a database on the file-system of the PLCnext Control at a user configurable interval.  
 The datalogger service starts and stops synchronously with the firmware.
 
-Implementation in PLCnext Technology **Firmware 2019.9**.  
+Implementation in PLCnext Technology **Firmware 2020.6**.  
 
 ## Before getting started ...
 

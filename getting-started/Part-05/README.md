@@ -46,24 +46,24 @@ By storage of data in static byte array, you do not know how many records are re
 	
 	//////////////////////////////////////////////////////////////////////////////////////////
 	//This is the ReadVariablesDataToByte method with ReadVariablesData service call of   	//
-	//DataLogger service. The Service Call reads the data from the given variable from      //
+	//DataLogger service. The Service Call reads the data from the given variable from 		//
 	//the session. This service function returns the data values from the passed variable 	//
 	//names including timestamps and data series consistent flags, which is called a record.//
-	//                                                                                      //
+	//																						//
 	//In a record the values are in a static order and doesn't contain any type information.//
 	//Each record starts with the timestamp followed by the values from the given variable 	//
-	//by names and ends with the consistent flag.                                           //
+	//by names and ends with the consistent flag.											//
 	//////////////////////////////////////////////////////////////////////////////////////////
 
 	ErrorCode CppDataLoggerComponent::ReadVariablesDataToByte(const Arp::String& sessionName,
 		const Arp::DateTime& startTime, const Arp::DateTime& endTime,
 		const std::vector<Arp::String>& variableNames, uint8* byteMemory)
 	{
-		IDataLoggerService::ReadVariablesDataValuesDelegate readValuesDelegate =
-			IDataLoggerService::ReadVariablesDataValuesDelegate::create([&](
+		IDataLoggerService2::ReadVariablesDataValuesDelegate readValuesDelegate =
+			IDataLoggerService2::ReadVariablesDataValuesDelegate::create([&](
 				IRscReadEnumerator<RscVariant<512>>& readEnumerator)
 		{
-			size_t r_offset = 0;  //reinitialize the r_offset
+			size_t r_offset = 0; 						//reinitialize the r_offset
 			memset(byteMemory, 0x00, sizeof(byteMemory));  //reinitialize the byteMemory array
 
 			// The readEnumerator gets the N-records,
@@ -99,15 +99,11 @@ By storage of data in static byte array, you do not know how many records are re
 								valueTmp.CopyTo(recordTime);
 								Log::Info("DateTime: {0}", recordTime.ToBinary());
 								/*End of dummy Code*/
-								
-							//reinitialize the dateTimeBuffer
-							uint8 dateTimeBuffer[8] = {0}; 		
-							
-							//copy the time stamp value to dateTimeBuffer
-							valueTmp.CopyTo(*((DateTime*)(dateTimeBuffer)));
-							
-							//write the dateTimeBuffer into byteMemory Array in Byte steps
-							for(int i = 0; i < sizeof(dateTimeBuffer); i++)  
+
+							uint8 dateTimeBuffer[8] = {0}; 					 //reinitialize the dateTimeBuffer
+							valueTmp.CopyTo(*((DateTime*)(dateTimeBuffer))); //copy the time stamp value to dateTimeBuffer
+
+							for(int i = 0; i < sizeof(dateTimeBuffer); i++)  //write the dateTimeBuffer into byteMemory Array in Byte steps
 							{
 								memcpy((byteMemory + r_offset), &dateTimeBuffer[i], 1);
 								r_offset += 1;
@@ -123,8 +119,7 @@ By storage of data in static byte array, you do not know how many records are re
 
 						 case RscType::Bool:  //if the DataType is Bool
 						 {
-							//copy the logging variable value into byteMemory Array
-							valueTmp.CopyTo(*((bool*)(byteMemory + r_offset))); 
+							valueTmp.CopyTo(*((bool*)(byteMemory + r_offset))); //copy the logging variable value into byteMemory Array
 							r_offset += 1; //increment the offset
 						 }
 						 break;
@@ -138,16 +133,21 @@ By storage of data in static byte array, you do not know how many records are re
 								/*End of dummy Code*/
 
 							uint8 eventCountBuffer[8] = {0}; //reset eventCountBuffer
-							
-							//copy the event counter value to eventCountBuffer
-							valueTmp.CopyTo(*((uint64*)(eventCountBuffer)));  
-							
-							// write the event counter into byteMemory Array in Byte steps
-							for(int i = 0; i < sizeof(eventCountBuffer); i++)  
+							valueTmp.CopyTo(*((uint64*)(eventCountBuffer)));  //copy the event counter value to eventCountBuffer
+
+							for(int i = 0; i < sizeof(eventCountBuffer); i++)  // write the event counter into byteMemory Array in Byte steps
 							{
 								memcpy((byteMemory + r_offset), &eventCountBuffer[i], 1);
 								r_offset += 1;
 							}
+						 }
+						 break;
+						 
+						 case RscType::Uint8:
+						 {
+							valueTmp.CopyTo(*((uint8*)(byteMemory + r_offset))); //Is only relevant for trigger-based data acquisition.
+																				 //The field indicates to which recording cycle the respective data record belongs.
+							r_offset += 1; //increment the offset
 						 }
 						 break;
 
@@ -169,7 +169,7 @@ By storage of data in static byte array, you do not know how many records are re
 				endTime,
 
 	   // This is the Delegate for the transmission of VariableNames
-	   IDataLoggerService::ReadVariablesDataVariableNamesDelegate::create([&](
+	   IDataLoggerService2::ReadVariablesDataVariableNamesDelegate::create([&](
 			 IRscWriteEnumerator<RscString<512>>& writeEnumerator)
 			 {
 				writeEnumerator.BeginWrite(variableNames.size());
@@ -181,37 +181,37 @@ By storage of data in static byte array, you do not know how many records are re
 			}),
 			readValuesDelegate);
 		return result;
-	};
+		};
 
-	/// Thread Body
-	void CppDataLoggerComponent::workerThreadBody(void) {
+		/// Thread Body
+		void CppDataLoggerComponent::workerThreadBody(void) {
 
-		if(!m_bInitialized) // If not initialized
-		{
-			//Set the startTime 1 second earlier as DateTime::Now().
-			Arp::Microseconds ticksNow(DateTime::Now().ToUnixMicrosecondTicks());
-			startTime = Arp::DateTime::FromUnixMicrosecondTicks((ticksNow - Arp::Seconds(1)).count());
-			//Log::Info("startTime: {0}", startTime.ToBinary());
+			if(!m_bInitialized) // If not initialized
+			{
+				//Set the startTime 1 second earlier as DateTime::Now().
+				Arp::Microseconds ticksNow(DateTime::Now().ToUnixTimeMicroseconds());
+				startTime = Arp::DateTime::FromUnixTimeMicroseconds((ticksNow - Arp::Seconds(1)).count());
+				Log::Info("startTime: {0}", startTime.ToBinary());
 
-			Init();  //Call Init() function
-		}
-
-		else{
-			   //The time window includes records between two worker thread cycles
-			   endTime = Arp::DateTime::Now(); 
-
-			   ErrorCode result = this->ReadVariablesDataToByte(
-						sessionname, //sessionname is defined in datalogger.config file.
-						startTime,	 //start time 
-						endTime,	 //end time 
-						CountingVariableNames, //vector with logged variable names
-						m_records	//this is the pointer to the ByteArray
-						);
-						
-				//The time window includes records inside worker thread cycle
-				startTime = endTime;  		  	
+				Init();  //Call Init() function
 			}
-		}
+
+			else{
+				   //The time window includes records between two worker thread cycles
+				   endTime = Arp::DateTime::Now(); 
+
+				   ErrorCode result = this->ReadVariablesDataToByte(
+							sessionname, //sessionname is defined in datalogger.config file.
+							startTime,	 //start time 
+							endTime,	 //end time 
+							CountingVariableNames, //vector with logged variable names
+							m_records	//this is the pointer to the ByteArray
+							);
+							
+					//The time window includes records inside worker thread cycle
+					startTime = endTime;  		  	
+				}
+			}
 	
    ```
    

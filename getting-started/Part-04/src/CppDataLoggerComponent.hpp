@@ -1,16 +1,4 @@
-﻿ /******************************************************************************
- *
- *  Copyright (c) Phoenix Contact GmbH & Co. KG. All rights reserved.
- *	Licensed under the MIT. See LICENSE file in the project root for full license information.
- *
- *  CppDataLoggerComponent.hpp
- *
- *  Created on: Jun, 2019
- *      Author: Eduard Muenz
- *
- ******************************************************************************/
-
-#pragma once
+﻿#pragma once
 #include "Arp/System/Core/Arp.h"
 #include "Arp/System/Acf/ComponentBase.hpp"
 #include "Arp/System/Acf/IApplication.hpp"
@@ -20,19 +8,19 @@
 #include "Arp/Plc/Commons/Meta/MetaLibraryBase.hpp"
 #include "Arp/System/Commons/Logging.h"
 
+
 #include "Arp/System/Acf/IControllerComponent.hpp"
 #include "Arp/System/Commons/Threading/WorkerThread.hpp"
 #include "Arp/System/Commons/Threading/Thread.hpp"
 #include "Arp/System/Commons/Threading/ThreadSettings.hpp"
 
 #include "Arp/System/Rsc/ServiceManager.hpp"
-#include "Arp/Services/DataLogger/Services/IDataLoggerService.hpp"
+#include "Arp/Services/DataLogger/Services/IDataLoggerService2.hpp"
 #include "Arp/System/Rsc/Services/RscVariant.hxx"
 #include "Arp/System/Rsc/Services/RscType.hpp"
 #include "Arp/System/Rsc/Services/RscArrayReader.hpp"
 #include "Arp/Services/DataLogger/Services/ErrorCode.hpp"
 #include "Arp/Plc/Gds/Services/VariableInfo.hpp"
-
 
 namespace CppDataLogger
 {
@@ -58,7 +46,7 @@ class CppDataLoggerComponent
 		, private Loggable<CppDataLoggerComponent>
 		, public IControllerComponent
 {
-public: // typ
+public: // typedefs
 
 public: // construction/destruction
     CppDataLoggerComponent(IApplication& application, const String& name);
@@ -90,32 +78,36 @@ public: // static factory operations
 private: // fields
     CppDataLoggerComponentProgramProvider programProvider;
 
-       //Worker Thread
-       WorkerThread workerThreadInstance;
-       bool xStopThread = false;
-       bool m_bInitialized = false;	// class already initialized?
+    	  //Worker Thread
+          WorkerThread workerThreadInstance;
+          bool xStopThread = false;
+          bool m_bInitialized = false;	// class already initialized?
 
-       // IDataLoggerService Handle
-       IDataLoggerService::Ptr m_pDataLoggerService;
-
-
-public: // IProgramComponent operations
-
+          // IDataLoggerService Handle
+          IDataLoggerService2::Ptr m_pDataLoggerService;
 
 public: /* Ports
            =====
            Component ports are defined in the following way:
+
            //#port
-           //#name(NameOfPort)
-           boolean portField;
+           //#attributes(Hidden)
+           struct PORTS {
+               //#name(NameOfPort)
+               //#attributes(Input|Retain|Opc)
+               Arp::boolean portField = false;
+               // The GDS name is "<componentName>/NameOfPort" if the struct is declared as Hidden
+               // otherwise the GDS name is "<componentName>/PORTS.NameOfPort"
+           } ports;
 
-           The name comment defines the name of the port and is optional. Default is the name of the field.
-           Attributes which are defined for a component port are IGNORED. If component ports with attributes
-           are necessary, define a single structure port where attributes can be defined foreach field of the
-           structure.
-           	 	 //#attributes(Output|Retain)
-*/
-
+           Create one (and only one) instance of this struct.
+           Apart from this single struct instance, there must be no other Component variables declared with the #port comment.
+           The only attribute that is allowed on the struct instance is "Hidden", and this is optional.
+           The struct can contain as many members as necessary.
+           The #name comment can be applied to each member of the struct, and is optional.
+           The #name comment defines the GDS name of an individual port element. If omitted, the member variable name is used as the GDS name.
+           The members of the struct can be declared with any of the attributes allowed for a Program port.
+        */
 };
 
 ///////////////////////////////////////////////////////////////////////////////

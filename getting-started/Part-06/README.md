@@ -79,47 +79,47 @@ For data transmission via PROFINET, we have to implement the following additiona
 
 	uint32 CppDataLoggerComponent::GetRecord(uint8* byteRecord, bool &b_PN_DataValidBit) {
 
-	uint32 currQueueSize = 0; //the value returns the current dequeue size
+		uint32 currQueueSize = 0; //the value returns the current dequeue size
 
-	if(m_bInitialized == true)
-	{
-		currQueueSize = toQueue.size(); //get the dequeue size
-
-		if(currQueueSize > 0 && b_PN_DataValidBit == true) //if the size is not zero and the Profinet communication is established
+		if(m_bInitialized == true)
 		{
-			shared_ptr<SaveToQueue> toPN; //shared pointer
+			currQueueSize = toQueue.size(); //get the dequeue size
 
-			myLock.lock(); //get mutex so we can read the record from the queue;
-			toPN = make_shared<SaveToQueue>((toQueue.front())); //get the first element to the shared pointer
-
-			if(toPN)
+			if(currQueueSize > 0 && b_PN_DataValidBit == true) //if the size is not zero and the Profinet communication is established
 			{
-				memset(byteRecord, 0x00, sizeof(toPN->byteRecord));
-				memcpy(byteRecord, toPN->byteRecord, sizeof(toPN->byteRecord)); //Copy 512 Bytes to the byteRecord
+				shared_ptr<SaveToQueue> toPN; //shared pointer
+
+				myLock.lock(); //get mutex so we can read the record from the queue;
+				toPN = make_shared<SaveToQueue>((toQueue.front())); //get the first element to the shared pointer
+
+				if(toPN)
+				{
+					memset(byteRecord, 0x00, sizeof(toPN->byteRecord));
+					memcpy(byteRecord, toPN->byteRecord, sizeof(toPN->byteRecord)); //Copy 512 Bytes to the byteRecord
+				}
+
+				toQueue.pop_front(); //delete the first element
+				myLock.unlock(); //unlock mutex
 			}
 
-			toQueue.pop_front(); //delete the first element
-			myLock.unlock(); //unlock mutex
-		}
+			if(currQueueSize > 10000 && currQueueSize < 100000 && m_QueueOverflowWarning == false) //set warning message, if the queue size is greater as 10000
+			{
+				Log::Info("[CppDataLoggerComponent]-------------------------------Record Overflow in the Queue is expected!");
+				m_QueueOverflowWarning = true;
+			}
+			else if(currQueueSize <= 1000)
+				m_QueueOverflowWarning = false;
 
-		if(currQueueSize > 10000 && currQueueSize < 100000 && m_QueueOverflowWarning == false) //set warning message, if the queue size is greater as 10000
-		{
-			Log::Info("[CppDataLoggerComponent]-------------------------------Record Overflow in the Queue is expected!");
-			m_QueueOverflowWarning = true;
+			if(currQueueSize > 100000 && m_QueueOverflowError == false) //set alarm message, if the queue size is greater as 100000
+			{
+				toQueue.erase(toQueue.begin(), toQueue.begin() + 10000); //erase the first 10000 elements
+				Log::Error("[CppDataLoggerComponent]-------------------------------Record Overflow in the Queue, the first 10000 records are erased! ");
+				m_QueueOverflowError = true;
+			}
+			else
+				m_QueueOverflowError = false;
 		}
-		else if(currQueueSize <= 1000)
-			m_QueueOverflowWarning = false;
-
-		if(currQueueSize > 100000 && m_QueueOverflowError == false) //set alarm message, if the queue size is greater as 100000
-		{
-			toQueue.erase(toQueue.begin(), toQueue.begin() + 10000); //erase the first 10000 elements
-			Log::Error("[CppDataLoggerComponent]-------------------------------Record Overflow in the Queue, the first 10000 records are erased! ");
-			m_QueueOverflowError = true;
-		}
-		else
-			m_QueueOverflowError = false;
-	}
-	return(currQueueSize);
+		return(currQueueSize);
 	}
 	
 	
@@ -135,171 +135,208 @@ For data transmission via PROFINET, we have to implement the following additiona
 	//////////////////////////////////////////////////////////////////////////////////////////
 
 	ErrorCode CppDataLoggerComponent::ReadVariablesDataToByte(const Arp::String& sessionName,
-    const Arp::DateTime& startTime, const Arp::DateTime& endTime,
-    const std::vector<Arp::String>& variableNames, uint8* byteMemory)
-   {
-    IDataLoggerService::ReadVariablesDataValuesDelegate readValuesDelegate =
-        IDataLoggerService::ReadVariablesDataValuesDelegate::create([&](
-            IRscReadEnumerator<RscVariant<512>>& readEnumerator)
-    {
-    // The readEnumerator gets the N-records,
-    // the number of record is not available, the records come as N (undefined) Records!
-    readEnumerator.BeginRead();
+		const Arp::DateTime& startTime, const Arp::DateTime& endTime,
+		const std::vector<Arp::String>& variableNames, uint8* byteMemory)
+	{
+		IDataLoggerService2::ReadVariablesDataValuesDelegate readValuesDelegate =
+			IDataLoggerService2::ReadVariablesDataValuesDelegate::create([&](
+				IRscReadEnumerator<RscVariant<512>>& readEnumerator)
+	  {
+		// The readEnumerator gets the N-records,
+		// the number of record is not available, the records come as N (undefined) Records!
+		readEnumerator.BeginRead();
 
-    RscVariant<512> currentVariant;
+		RscVariant<512> currentVariant;
 
-    while (readEnumerator.ReadNext(currentVariant))
-    {
-        RscType rscType = currentVariant.GetType();
+		while (readEnumerator.ReadNext(currentVariant))
+		{
+			RscType rscType = currentVariant.GetType();
 
-        // Check if the rscType is a Array,
-        // if yes -> the next record is founded
-        if (rscType == RscType::Array)
-        {
-            RscArrayReader arrayReader(currentVariant); //read currentVariant into arrayReader
-            size_t arraySize = arrayReader.GetSize();   //Get the size of Array
-            size_t r_offset = 0;                        //reinitialize the r_offset
+			Log::Info("rscType = {0}", (int)rscType);
 
-            uint8 ID_Number = 0;                        //reinitialize the ID_Number
-            uint8 LogVarCounter = 0;                    //reinitialize the LogVarCounter
-            RscVariant<512> valueTmp = {0};             //reinitialize the valueTmp
-            uint8 valueLogVarTmp[8] = {0};              //reinitialize the valueLogVarTmp
-            uint8 dateTimeBuffer[8] = {0};              //reinitialize the dateTimeBuffer
+			// Check if the rscType is a Array,
+			// if yes -> the next record is founded
+			if (rscType == RscType::Array)
+			{
+				Log::Info("if (rscType == RscType::Array) rscType = {0}", (int)rscType);
+				RscArrayReader arrayReader(currentVariant); //read currentVariant into arrayReader
+				size_t arraySize = arrayReader.GetSize();   //Get the size of Array
+				size_t r_offset = 0;                        //reinitialize the r_offset
 
-            bool b_FoundNullValue = false;              //reinitialize the b_FoundNullValue
+				uint8 ID_Number = 0;                        //reinitialize the ID_Number
+				uint8 LogVarCounter = 0;                    //reinitialize the LogVarCounter
+				RscVariant<512> valueTmp = {0};             //reinitialize the valueTmp
+				uint8 valueLogVarTmp[8] = {0};              //reinitialize the valueLogVarTmp
+				uint8 dateTimeBuffer[8] = {0};              //reinitialize the dateTimeBuffer
 
-            std::vector<size_t> dataValidOffsetTmp;     //vector for r_offset of DataValidBit
-            std::vector<SaveToQueue> byteRecordTmp;     //temporary vector for variable Array will be used as PN-Telegram buffer if the variable numbers are above 50 (509 Bytes)
+				bool b_FoundNullValue = false;              //reinitialize the b_FoundNullValue
 
-            memset(newRecord.byteRecord, 0x00, sizeof(newRecord.byteRecord));  //reinitialize the newRecord.byteRecord
+				std::vector<size_t> dataValidOffsetTmp;     //vector for r_offset of DataValidBit
+				std::vector<SaveToQueue> byteRecordTmp;     //temporary vector for variable Array will be used as PN-Telegram buffer if the variable numbers are above 50 (509 Bytes)
 
-            for (size_t i = 0; i < (arraySize-1); i++)  //for each element-1 in the array, the last element is a DataValidBit and will be copy separately after this loop
-            {
-             // The Value will be copied into variant
-            arrayReader.ReadNext(valueTmp);
+				memset(newRecord.byteRecord, 0x00, sizeof(newRecord.byteRecord));  //reinitialize the newRecord.byteRecord
 
-            // Each RscType should be check separately
-            // The following data types are expected: DateTime, Bool, Uint64 and Void(NULL)
-             switch (valueTmp.GetType())
-             {
-             case RscType::DateTime:  //if the DataType is DateTime
-             {
-                uint8 dateTimeBuffer[8] = {0};                   //reinitialize the dateTimeBuffer
-             	valueTmp.CopyTo(*((DateTime*)(dateTimeBuffer))); //copy the time stamp value to dateTimeBuffer
+				Log::Info("arraySize = {0}", (int)(arraySize));
+				for (size_t i = 0; i < (arraySize-2); i++)  //for each element-2 in the array, the last element is a DataValidBit and will be copy separately after this loop
+				{
+				 // The Value will be copied into variant
+				arrayReader.ReadNext(valueTmp);
 
-             	for(int i = 0; i < sizeof(dateTimeBuffer); i++)  //write the dateTimeBuffer into newRecord.byteRecord Array
-             	{
-             		memcpy((newRecord.byteRecord + r_offset), &dateTimeBuffer[i], 1);
-             		r_offset += 1;
-             	 }
+				// Each RscType should be check separately
+				// The following data types are expected: DateTime, Bool, Uint64 and Void(NULL)
 
-            	ID_Number = 0; // set the Variable ID-Number to zero, the ID-Number will be incremented during iteration of elements
-             }
-             break;
+				 switch (valueTmp.GetType())
+				 {
+				 case RscType::DateTime:  //if the DataType is DateTime
+				 {
+					Log::Info(" case RscType::DateTime");
+					uint8 dateTimeBuffer[8] = {0};                   //reinitialize the dateTimeBuffer
+					valueTmp.CopyTo(*((DateTime*)(dateTimeBuffer))); //copy the time stamp value to dateTimeBuffer
 
-             case RscType::Void:
-             {
-             	if (b_FoundNullValue == false)
-             	{
-             		b_FoundNullValue = true;  //Null-Value is founded
-             	}
-             	else
-             	{
-             		//Log::Info("ID_Number = {0}   Value = Void", (int)ID_Number);
-             		ID_Number += 1;            //increment logging variable ID_Number if the Null-Value and Null-EventCounter is founded
-             		b_FoundNullValue = false;
-             	}
-             }
-             break;
+					for(int i = 0; i < sizeof(dateTimeBuffer); i++)  //write the dateTimeBuffer into newRecord.byteRecord Array
+					{
+						memcpy((newRecord.byteRecord + r_offset), &dateTimeBuffer[i], 1);
+						r_offset += 1;
+					 }
 
-             case RscType::Bool:  //if the DataType is Bool
-             {
-            	newRecord.byteRecord[r_offset] = ID_Number;  // copy the variable ID-Number to newRecord.byteRecord
-            	ID_Number += 1;                              // increment logging variable ID_Number
-            	r_offset += 1;                               // increment the offset
+					ID_Number = 0; // set the Variable ID-Number to zero, the ID-Number will be incremented during iteration of elements
+				 }
+				 break;
 
-            	valueTmp.CopyTo(*((bool*)(valueLogVarTmp))); // copy the logging variable value to valueLogVarTmp
-            	newRecord.byteRecord[r_offset] = valueLogVarTmp[0]; // copy the record-element to newRecord.byteRecord
-                r_offset += 1; //increment the offset
+				 case RscType::Void:
+				 {
+					Log::Info(" case RscType::Void");
+					if (b_FoundNullValue == false)
+					{
+						b_FoundNullValue = true;  //Null-Value is founded
+					}
+					else
+					{
+						Log::Info("ID_Number = {0}   Value = Void", (int)ID_Number);
+						ID_Number += 1;            //increment logging variable ID_Number if the Null-Value and Null-EventCounter is founded
+						b_FoundNullValue = false;
+					}
+				 }
+				 break;
 
-                //Log::Info("ID_Number = {0}   Value = {1}", (int) newRecord.byteRecord[r_offset-2], (int) newRecord.byteRecord[r_offset-1]);
-             }
-             break;
+				 case RscType::Bool:  //if the DataType is Bool
+				 {
+					Log::Info(" case RscType::Bool");
+					newRecord.byteRecord[r_offset] = ID_Number;  // copy the variable ID-Number to newRecord.byteRecord
+					ID_Number += 1;                              // increment logging variable ID_Number
+					r_offset += 1;                               // increment the offset
 
-             case RscType::Uint64:
-             {
-                uint8 eventCountBuffer[8] = {0}; //reset eventCountBuffer
+					valueTmp.CopyTo(*((bool*)(valueLogVarTmp))); // copy the logging variable value to valueLogVarTmp
+					newRecord.byteRecord[r_offset] = valueLogVarTmp[0]; // copy the record-element to newRecord.byteRecord
+					r_offset += 1; //increment the offset
 
-                //copy the eventVariable Counter Value to the newRecord
-                valueTmp.CopyTo(*((uint64*)(eventCountBuffer)));  //copy the event counter value to eventCountBuffer
+					Log::Info("ID_Number = {0}   Value = {1}", (int) newRecord.byteRecord[r_offset-2], (int) newRecord.byteRecord[r_offset-1]);
+				 }
+				 break;
 
-                for(int i = 0; i < sizeof(eventCountBuffer); i++) //write the event counter into newRecord.byteRecord Array
-                {
-                	memcpy((newRecord.byteRecord + r_offset), &eventCountBuffer[i], 1);
-                	r_offset += 1;
-                }
+				 case RscType::Uint64:
+				 {
+					Log::Info("case RscType::Uint64:");
 
-                LogVarCounter += 1; //increment LogVarCounter
-             }
-              break;
+					uint8 eventCountBuffer[8] = {0}; //reset eventCountBuffer
 
-             default:
-                 break;
-             }
+					//copy the eventVariable Counter Value to the newRecord
+					valueTmp.CopyTo(*((uint64*)(eventCountBuffer)));  //copy the event counter value to eventCountBuffer
 
-             if (LogVarCounter >= MaxLogVar) // The limit for one PN Telegram is 50 variables: Time stamp + 50 x (VarID + VarValue + eventCount) + DataValidBit
-                                             // 50 Variables = 8 Byte + 50 x 10Bytes + 1Byte = 509 Bytes (Offset 0..508)
-             {
-             	dataValidOffsetTmp.push_back(r_offset); //save the the offset of "r_offset" to dataValidOffsetTmp-vector (is needed for complete the PN-Telegram with data-valid bit)
-             	byteRecordTmp.push_back(newRecord);     //save the record to byteRecordTmp-vector
+					uint64 CounterValue = 0;
+					valueTmp.CopyTo(CounterValue);
+					Log::Info("CounterValue = {0}", CounterValue);
 
-             	LogVarCounter = 0;  //reset the LogVarCounter
-                r_offset = 0;       //reset the r_offset
+					for(int i = 0; i < sizeof(eventCountBuffer); i++) //write the event counter into newRecord.byteRecord Array
+					{
+						memcpy((newRecord.byteRecord + r_offset), &eventCountBuffer[i], 1);
+						r_offset += 1;
+					}
 
-                memset(newRecord.byteRecord, 0x00, sizeof(newRecord.byteRecord)); //reinitialize the newRecord.byteRecord
+					LogVarCounter += 1; //increment LogVarCounter
+				 }
+				  break;
 
-                for(int i = 0; i < sizeof(dateTimeBuffer); i++) //write the time stamp in the first 8 Bytes of newRecord.byteRecord Array
-                 {
-                 	memcpy((newRecord.byteRecord + r_offset), &dateTimeBuffer[i], 1); //copy one of 8 time stamp bytes into newRecord.byteRecord Array
-                 	r_offset += 1; //increment the offset after copy of 1Byte
-                 }
-             }
-         }
+				 default:
+					 Log::Info(" case RscType::default:");
+					 break;
+				 }
 
-     arrayReader.ReadNext(valueTmp); //read in the last element "ConsistentDataSeries"
+				 if (LogVarCounter >= MaxLogVar) // The limit for one PN Telegram is 50 variables: Time stamp + 50 x (VarID + VarValue + eventCount) + DataValidBit
+												 // 50 Variables = 8 Byte + 50 x 10Bytes + 1Byte = 509 Bytes (Offset 0..508)
+				 {
+					dataValidOffsetTmp.push_back(r_offset); //save the the offset of "r_offset" to dataValidOffsetTmp-vector (is needed for complete the PN-Telegram with data-valid bit)
+					byteRecordTmp.push_back(newRecord);     //save the record to byteRecordTmp-vector
 
-	 if(valueTmp.GetType() == RscType::Bool) //The last Element is "ConsistentDataSeries"
-	 {
-		 valueTmp.CopyTo(*((bool*)(newRecord.byteRecord + r_offset))); //copy the ConsistentDataSeries value into newRecord.byteRecord
+					LogVarCounter = 0;  //reset the LogVarCounter
+					r_offset = 0;       //reset the r_offset
 
-		 int iOffset = 0;
+					memset(newRecord.byteRecord, 0x00, sizeof(newRecord.byteRecord)); //reinitialize the newRecord.byteRecord
 
-		 for(size_t j=0; j < byteRecordTmp.size(); j++) //If more that 50 variables are logged, divide the Record in tree PN-Telegrams
+					for(int i = 0; i < sizeof(dateTimeBuffer); i++) //write the time stamp in the first 8 Bytes of newRecord.byteRecord Array
+					 {
+						memcpy((newRecord.byteRecord + r_offset), &dateTimeBuffer[i], 1); //copy one of 8 time stamp bytes into newRecord.byteRecord Array
+						r_offset += 1; //increment the offset after copy of 1Byte
+					 }
+				 }
+			 }
+
+		 arrayReader.ReadNext(valueTmp); //read in the element "ConsistentDataSeries"
+
+		 if(valueTmp.GetType() == RscType::Bool)
 		 {
-		 	iOffset = (int)dataValidOffsetTmp[j]; //Get iOffset as index for "ConsistentDataSeries"
-		 	byteRecordTmp[j].byteRecord[iOffset]= newRecord.byteRecord[r_offset]; //copy the ConsistentDataSeries value into PN-Telegram (index position 508, 508, 288)
+			 valueTmp.CopyTo(*((bool*)(newRecord.byteRecord + r_offset))); //copy the ConsistentDataSeries value into newRecord.byteRecord
 
-		 	myLock.lock(); //get mutex so we can write our new record to the queue;
-		 	toQueue.push_back(byteRecordTmp[j]); //save the byteRecordTmp into PN-Telegram Queue
-		 	myLock.unlock(); //unlock mutex
+			 int iOffset = 0;
+
+			 for(size_t j=0; j < byteRecordTmp.size(); j++) //If more that 50 variables are logged, divide the Record in tree PN-Telegrams
+			 {
+				iOffset = (int)dataValidOffsetTmp[j]; //Get iOffset as index for "ConsistentDataSeries"
+				byteRecordTmp[j].byteRecord[iOffset]= newRecord.byteRecord[r_offset]; //copy the ConsistentDataSeries value into PN-Telegram (index position 508, 508, 288)
+
+				myLock.lock(); //get mutex so we can write our new record to the queue;
+				toQueue.push_back(byteRecordTmp[j]); //save the byteRecordTmp into PN-Telegram Queue
+				myLock.unlock(); //unlock mutex
+			 }
+
+			 //std::lock_guard<std::mutex> lock(this->myLock);
+			 myLock.lock(); //get mutex so we can write our new record to the queue;
+			 toQueue.push_back(newRecord); //save thenewRecord into PN-Telegram Queue
+			 myLock.unlock(); //unlock mutex
+		  }
+
+		  else
+		 {
+			  Log::Error("ReadVariablesDataToByte()----------The ConsistentDataSeries Value is NOT found");
 		 }
 
-		 //std::lock_guard<std::mutex> lock(this->myLock);
-		 myLock.lock(); //get mutex so we can write our new record to the queue;
-		 toQueue.push_back(newRecord); //save thenewRecord into PN-Telegram Queue
-		 myLock.unlock(); //unlock mutex
-	  }
+		 /////////////////////////////////////////////////////////////////////////////////////////////
+		 //The last element "Record Type", is only relevant for trigger-based data acquisition	    //
+		 //The field indicates to which recording cycle the respective data record belongs.         //
+		 //This is mainly of interest when you have a trigger-based recording.                      //
+		 //The field can then be used to check whether the data record was recorded before the      //
+		 //trigger was triggered (PreCycle), whether the trigger was fulfilled at the time (trigger)//
+		 //or whether the data record corresponds to a cycle after the trigger (PostCycle).         //
+		 //For detailed information please see "RecordType.hpp"                                     //
+		 /////////////////////////////////////////////////////////////////////////////////////////////
 
-      else
-     {
-    	  Log::Error("ReadVariablesDataToByte()----------The ConsistentDataSeries Value is NOT found");
-     }
-     }
-    }
-     readEnumerator.EndRead();
+		arrayReader.ReadNext(valueTmp);
+
+		if(valueTmp.GetType() == RscType::Uint8)
+		 {
+			 uint8 RecordTypeValue = 0;
+			 valueTmp.CopyTo(RecordTypeValue);
+		 }
+		  else
+		 {
+			  Log::Error("ReadVariablesDataToByte()----------The Record Type Value Value is NOT found");
+		 }
+		}
+	  }
+	  readEnumerator.EndRead();
 	});
 
-    ErrorCode result;
+	ErrorCode result;
 
 	//Call the ReadVariablesData Method from DataLogger Service
 	result = this->m_pDataLoggerService->ReadVariablesData(
@@ -308,7 +345,7 @@ For data transmission via PROFINET, we have to implement the following additiona
 			endTime,
 
 	// This is the Delegate for the transmission of VariableNames
-	IDataLoggerService::ReadVariablesDataVariableNamesDelegate::create([&](
+	IDataLoggerService2::ReadVariablesDataVariableNamesDelegate::create([&](
 		 IRscWriteEnumerator<RscString<512>>& writeEnumerator)
 		 {
 			writeEnumerator.BeginWrite(variableNames.size());
@@ -319,7 +356,7 @@ For data transmission via PROFINET, we have to implement the following additiona
 			writeEnumerator.EndWrite();
 		}),
 		readValuesDelegate);
-	 return result;
+	return result;
 	};
 	
    ```
@@ -372,19 +409,19 @@ For data transmission via PROFINET, we have to implement the following additiona
 
 4. Add in PLCnext Engineer project a new program "PN_Send_Receive" with needed system and port variables as showed in steps 1-3 in following picture:
 
-![IEC_Program](Picture/11_PN_Send_Receive_Var.png)
+![IEC_Program](/Picture/11_PN_Send_Receive_Var.png)
 
 5. Add the following Code to "PN_Send_Receive" program:
 
-![IEC_Program](Picture/12_PN_Send_Receive_Code.png)
+![IEC_Program](/Picture/12_PN_Send_Receive_Code.png)
 
 6. Instantiate the "PN_Send_Receive" program:
 
-![IEC_Program](Picture/13_PN_Send_Receive_Instance.png)
+![IEC_Program](/Picture/13_PN_Send_Receive_Instance.png)
 
 7. Connect the Port variables as showed in steps 1-4:
 
-![IEC_Program](Picture/14_PN_Send_Receive_ConnectPortVariables.png)
+![IEC_Program](/Picture/14_PN_Send_Receive_ConnectPortVariables.png)
 
 8. Download and execute the PLCnEng project on the PLCnext target.
 

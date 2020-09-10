@@ -45,6 +45,7 @@ void CppDataLoggerComponent::ResetConfig()
     // implement this inverse to SetupConfig() and LoadConfig()
 }
 
+
 void CppDataLoggerComponent::Start(void) {
 	xStopThread = false;
 	Log::Info("[CppDataLoggerComponent]-------------------------------workerThreadInstance start");
@@ -61,6 +62,7 @@ void CppDataLoggerComponent::Stop(void) {
 	workerThreadInstance.Stop();
 	Log::Info("[CppDataLoggerComponent]-------------------------------DataLoggerService stopped");
 }
+
 
 //////////////////////////////////////////////////////////////////////////////////////////
 //This is the "GetRecord" method and will be executed by program in real-time context.  //
@@ -121,7 +123,6 @@ uint32 CppDataLoggerComponent::GetRecord(uint8* byteRecord, bool &b_PN_DataValid
 }
 
 
-
 bool CppDataLoggerComponent::Init()
 {
 	if(m_bInitialized)  // If already initialized, don't execute initialization again
@@ -131,9 +132,9 @@ bool CppDataLoggerComponent::Init()
 
 	bool bRet = false;
 
-	m_pDataLoggerService = ServiceManager::GetService<IDataLoggerService>();     //get IDataLoggerService
+	m_pDataLoggerService = ServiceManager::GetService<IDataLoggerService2>();     //get IDataLoggerService2
 
-	if(m_pDataLoggerService != NULL) //if IDataLoggerService is valid
+	if(m_pDataLoggerService != NULL) //if IDataLoggerService2 is valid
 	{
 
 		////////////////////////////////////////////////////////////////////
@@ -143,7 +144,7 @@ bool CppDataLoggerComponent::Init()
 		//Result vector of sessions names started by DataLogger Service
 		std::vector<Arp::String> sessions;
 
-		this->m_pDataLoggerService->ListSessionNames(IDataLoggerService::ListSessionNamesResultDelegate::create([&](IRscReadEnumerator<RscString<512>> &enumerator)
+		this->m_pDataLoggerService->ListSessionNames(IDataLoggerService2::ListSessionNamesResultDelegate::create([&](IRscReadEnumerator<RscString<512>> &enumerator)
 		{
 			size_t nVariables = enumerator.BeginRead();
 			sessions.reserve(nVariables);
@@ -168,7 +169,7 @@ bool CppDataLoggerComponent::Init()
 		//Result vector of Logged variables
 		std::vector<Arp::Plc::Gds::Services::VariableInfo> VariableInfos;
 
-		ErrorCode error = this->m_pDataLoggerService->GetLoggedVariables(sessionname, IDataLoggerService::GetLoggedVariablesInfosDelegate::create([&](IRscReadEnumerator<Arp::Plc::Gds::Services::VariableInfo> &enumerator)
+		ErrorCode error = this->m_pDataLoggerService->GetLoggedVariables(sessionname, IDataLoggerService2::GetLoggedVariablesInfosDelegate::create([&](IRscReadEnumerator<Arp::Plc::Gds::Services::VariableInfo> &enumerator)
 		{
 
 	        size_t nVariables = enumerator.BeginRead();
@@ -210,7 +211,7 @@ bool CppDataLoggerComponent::Init()
 	    std::vector<Arp::Plc::Gds::Services::RscString<512>> SessionInfos;
 
 
-	    this->m_pDataLoggerService->GetSessionNames(currentVariableName, IDataLoggerService::GetSessionNamesResultDelegate::create([&](IRscReadEnumerator<Arp::Plc::Gds::Services::RscString<512>> &enumerator)
+	    this->m_pDataLoggerService->GetSessionNames(currentVariableName, IDataLoggerService2::GetSessionNamesResultDelegate::create([&](IRscReadEnumerator<Arp::Plc::Gds::Services::RscString<512>> &enumerator)
 	    {
 	    	size_t nSessions = enumerator.BeginRead();
 	    	SessionInfos.reserve(nSessions);
@@ -230,7 +231,7 @@ bool CppDataLoggerComponent::Init()
 	}
 	else
 	{
-		Log::Error("[CppDataLoggerComponent] ServiceManager::GetService<IDataLoggerService>() returned error");
+		Log::Error("[CppDataLoggerComponent] ServiceManager::GetService<IDataLoggerService2>() returned error");
 	}
 	return(bRet);
 }
@@ -251,8 +252,8 @@ ErrorCode CppDataLoggerComponent::ReadVariablesDataToByte(const Arp::String& ses
     const Arp::DateTime& startTime, const Arp::DateTime& endTime,
     const std::vector<Arp::String>& variableNames, uint8* byteMemory)
 {
-    IDataLoggerService::ReadVariablesDataValuesDelegate readValuesDelegate =
-        IDataLoggerService::ReadVariablesDataValuesDelegate::create([&](
+    IDataLoggerService2::ReadVariablesDataValuesDelegate readValuesDelegate =
+        IDataLoggerService2::ReadVariablesDataValuesDelegate::create([&](
             IRscReadEnumerator<RscVariant<512>>& readEnumerator)
   {
     // The readEnumerator gets the N-records,
@@ -265,10 +266,13 @@ ErrorCode CppDataLoggerComponent::ReadVariablesDataToByte(const Arp::String& ses
     {
         RscType rscType = currentVariant.GetType();
 
+        Log::Info("rscType = {0}", (int)rscType);
+
         // Check if the rscType is a Array,
         // if yes -> the next record is founded
         if (rscType == RscType::Array)
         {
+        	Log::Info("if (rscType == RscType::Array) rscType = {0}", (int)rscType);
             RscArrayReader arrayReader(currentVariant); //read currentVariant into arrayReader
             size_t arraySize = arrayReader.GetSize();   //Get the size of Array
             size_t r_offset = 0;                        //reinitialize the r_offset
@@ -286,17 +290,20 @@ ErrorCode CppDataLoggerComponent::ReadVariablesDataToByte(const Arp::String& ses
 
             memset(newRecord.byteRecord, 0x00, sizeof(newRecord.byteRecord));  //reinitialize the newRecord.byteRecord
 
-            for (size_t i = 0; i < (arraySize-1); i++)  //for each element-1 in the array, the last element is a DataValidBit and will be copy separately after this loop
+            Log::Info("arraySize = {0}", (int)(arraySize));
+            for (size_t i = 0; i < (arraySize-2); i++)  //for each element-2 in the array, the last element is a DataValidBit and will be copy separately after this loop
             {
              // The Value will be copied into variant
             arrayReader.ReadNext(valueTmp);
 
             // Each RscType should be check separately
             // The following data types are expected: DateTime, Bool, Uint64 and Void(NULL)
+
              switch (valueTmp.GetType())
              {
              case RscType::DateTime:  //if the DataType is DateTime
              {
+            	Log::Info(" case RscType::DateTime");
                 uint8 dateTimeBuffer[8] = {0};                   //reinitialize the dateTimeBuffer
              	valueTmp.CopyTo(*((DateTime*)(dateTimeBuffer))); //copy the time stamp value to dateTimeBuffer
 
@@ -312,13 +319,14 @@ ErrorCode CppDataLoggerComponent::ReadVariablesDataToByte(const Arp::String& ses
 
              case RscType::Void:
              {
+            	Log::Info(" case RscType::Void");
              	if (b_FoundNullValue == false)
              	{
              		b_FoundNullValue = true;  //Null-Value is founded
              	}
              	else
              	{
-             		//Log::Info("ID_Number = {0}   Value = Void", (int)ID_Number);
+             		Log::Info("ID_Number = {0}   Value = Void", (int)ID_Number);
              		ID_Number += 1;            //increment logging variable ID_Number if the Null-Value and Null-EventCounter is founded
              		b_FoundNullValue = false;
              	}
@@ -327,6 +335,7 @@ ErrorCode CppDataLoggerComponent::ReadVariablesDataToByte(const Arp::String& ses
 
              case RscType::Bool:  //if the DataType is Bool
              {
+            	Log::Info(" case RscType::Bool");
             	newRecord.byteRecord[r_offset] = ID_Number;  // copy the variable ID-Number to newRecord.byteRecord
             	ID_Number += 1;                              // increment logging variable ID_Number
             	r_offset += 1;                               // increment the offset
@@ -335,16 +344,22 @@ ErrorCode CppDataLoggerComponent::ReadVariablesDataToByte(const Arp::String& ses
             	newRecord.byteRecord[r_offset] = valueLogVarTmp[0]; // copy the record-element to newRecord.byteRecord
                 r_offset += 1; //increment the offset
 
-                //Log::Info("ID_Number = {0}   Value = {1}", (int) newRecord.byteRecord[r_offset-2], (int) newRecord.byteRecord[r_offset-1]);
+                Log::Info("ID_Number = {0}   Value = {1}", (int) newRecord.byteRecord[r_offset-2], (int) newRecord.byteRecord[r_offset-1]);
              }
              break;
 
              case RscType::Uint64:
              {
+            	Log::Info("case RscType::Uint64:");
+
                 uint8 eventCountBuffer[8] = {0}; //reset eventCountBuffer
 
                 //copy the eventVariable Counter Value to the newRecord
                 valueTmp.CopyTo(*((uint64*)(eventCountBuffer)));  //copy the event counter value to eventCountBuffer
+
+                uint64 CounterValue = 0;
+                valueTmp.CopyTo(CounterValue);
+                Log::Info("CounterValue = {0}", CounterValue);
 
                 for(int i = 0; i < sizeof(eventCountBuffer); i++) //write the event counter into newRecord.byteRecord Array
                 {
@@ -357,6 +372,7 @@ ErrorCode CppDataLoggerComponent::ReadVariablesDataToByte(const Arp::String& ses
               break;
 
              default:
+            	 Log::Info(" case RscType::default:");
                  break;
              }
 
@@ -379,9 +395,9 @@ ErrorCode CppDataLoggerComponent::ReadVariablesDataToByte(const Arp::String& ses
              }
          }
 
-     arrayReader.ReadNext(valueTmp); //read in the last element "ConsistentDataSeries"
+     arrayReader.ReadNext(valueTmp); //read in the element "ConsistentDataSeries"
 
-	 if(valueTmp.GetType() == RscType::Bool) //The last Element is "ConsistentDataSeries"
+	 if(valueTmp.GetType() == RscType::Bool)
 	 {
 		 valueTmp.CopyTo(*((bool*)(newRecord.byteRecord + r_offset))); //copy the ConsistentDataSeries value into newRecord.byteRecord
 
@@ -407,6 +423,28 @@ ErrorCode CppDataLoggerComponent::ReadVariablesDataToByte(const Arp::String& ses
      {
     	  Log::Error("ReadVariablesDataToByte()----------The ConsistentDataSeries Value is NOT found");
      }
+
+	 /////////////////////////////////////////////////////////////////////////////////////////////
+	 //The last element "Record Type", is only relevant for trigger-based data acquisition	    //
+	 //The field indicates to which recording cycle the respective data record belongs.         //
+	 //This is mainly of interest when you have a trigger-based recording.                      //
+	 //The field can then be used to check whether the data record was recorded before the      //
+	 //trigger was triggered (PreCycle), whether the trigger was fulfilled at the time (trigger)//
+	 //or whether the data record corresponds to a cycle after the trigger (PostCycle).         //
+	 //For detailed information please see "RecordType.hpp"                                     //
+	 /////////////////////////////////////////////////////////////////////////////////////////////
+
+	arrayReader.ReadNext(valueTmp);
+
+	if(valueTmp.GetType() == RscType::Uint8)
+	 {
+		 uint8 RecordTypeValue = 0;
+		 valueTmp.CopyTo(RecordTypeValue);
+	 }
+      else
+     {
+    	  Log::Error("ReadVariablesDataToByte()----------The Record Type Value Value is NOT found");
+     }
     }
   }
   readEnumerator.EndRead();
@@ -421,7 +459,7 @@ result = this->m_pDataLoggerService->ReadVariablesData(
         endTime,
 
 // This is the Delegate for the transmission of VariableNames
-IDataLoggerService::ReadVariablesDataVariableNamesDelegate::create([&](
+IDataLoggerService2::ReadVariablesDataVariableNamesDelegate::create([&](
      IRscWriteEnumerator<RscString<512>>& writeEnumerator)
 	 {
         writeEnumerator.BeginWrite(variableNames.size());
@@ -461,3 +499,4 @@ void CppDataLoggerComponent::workerThreadBody(void) {
 		}
 	}
 } // end of namespace CppDataLogger
+

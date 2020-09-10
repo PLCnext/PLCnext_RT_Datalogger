@@ -1,16 +1,4 @@
-﻿ /******************************************************************************
- *
- *  Copyright (c) Phoenix Contact GmbH & Co. KG. All rights reserved.
- *	Licensed under the MIT. See LICENSE file in the project root for full license information.
- *
- *  CppDataLoggerComponent.cpp
- *
- *  Created on: Jun, 2019
- *      Author: Eduard Muenz
- *
- ******************************************************************************/
-
-#include "CppDataLoggerComponent.hpp"
+﻿#include "CppDataLoggerComponent.hpp"
 #include "Arp/Plc/Commons/Esm/ProgramComponentBase.hpp"
 
 namespace CppDataLogger
@@ -45,6 +33,7 @@ void CppDataLoggerComponent::ResetConfig()
     // implement this inverse to SetupConfig() and LoadConfig()
 }
 
+
 void CppDataLoggerComponent::Start(void) {
 	xStopThread = false;
 	Log::Info("[CppDataLoggerComponent]-------------------------------workerThreadInstance start");
@@ -72,19 +61,20 @@ bool CppDataLoggerComponent::Init()
 
 	bool bRet = false;
 
-	m_pDataLoggerService = ServiceManager::GetService<IDataLoggerService>();     //get IDataLoggerService
+	m_pDataLoggerService = ServiceManager::GetService<IDataLoggerService2>();     //get IDataLoggerService2
 
-	if(m_pDataLoggerService != NULL) //if IDataLoggerService is valid
+	if(m_pDataLoggerService != NULL) //if IDataLoggerService2 is valid
 	{
 
-		////////////////////////////////////////////////////////////////////
-		//This is the ListSessionNames service call of DataLogger service.//
-		////////////////////////////////////////////////////////////////////
+		//////////////////////////////////////////////////////////////////////////////
+		//This is the ListSessionNames service call of DataLogger service.          //
+		//The service call Queries names of sessions, started by DataLogger Service.//
+		//////////////////////////////////////////////////////////////////////////////
 
 		//Result vector of sessions names started by DataLogger Service
 		std::vector<Arp::String> sessions;
 
-		this->m_pDataLoggerService->ListSessionNames(IDataLoggerService::ListSessionNamesResultDelegate::create([&](IRscReadEnumerator<RscString<512>> &enumerator)
+		this->m_pDataLoggerService->ListSessionNames(IDataLoggerService2::ListSessionNamesResultDelegate::create([&](IRscReadEnumerator<RscString<512>> &enumerator)
 		{
 			size_t nVariables = enumerator.BeginRead();
 			sessions.reserve(nVariables);
@@ -102,14 +92,13 @@ bool CppDataLoggerComponent::Init()
 		//This is the GetLoggedVariables service call of DataLogger service.    //
 		//The service call Queries all info about logged variables of a session.//
 		//////////////////////////////////////////////////////////////////////////
-
 		//Name of session to query logged variables
 	 	sessionname = sessions[0] ; // The array element "sessions[0]" contains the current session name, the content is set by Service Call "ListSessionNames"
 
 		//Result vector of Logged variables
 		std::vector<Arp::Plc::Gds::Services::VariableInfo> VariableInfos;
 
-		ErrorCode error = this->m_pDataLoggerService->GetLoggedVariables(sessionname, IDataLoggerService::GetLoggedVariablesInfosDelegate::create([&](IRscReadEnumerator<Arp::Plc::Gds::Services::VariableInfo> &enumerator)
+		ErrorCode error = this->m_pDataLoggerService->GetLoggedVariables(sessionname, IDataLoggerService2::GetLoggedVariablesInfosDelegate::create([&](IRscReadEnumerator<Arp::Plc::Gds::Services::VariableInfo> &enumerator)
 		{
 
 	        size_t nVariables = enumerator.BeginRead();
@@ -151,7 +140,7 @@ bool CppDataLoggerComponent::Init()
 	    std::vector<Arp::Plc::Gds::Services::RscString<512>> SessionInfos;
 
 
-	    this->m_pDataLoggerService->GetSessionNames(currentVariableName, IDataLoggerService::GetSessionNamesResultDelegate::create([&](IRscReadEnumerator<Arp::Plc::Gds::Services::RscString<512>> &enumerator)
+	    this->m_pDataLoggerService->GetSessionNames(currentVariableName, IDataLoggerService2::GetSessionNamesResultDelegate::create([&](IRscReadEnumerator<Arp::Plc::Gds::Services::RscString<512>> &enumerator)
 	    {
 	    	size_t nSessions = enumerator.BeginRead();
 	    	SessionInfos.reserve(nSessions);
@@ -171,7 +160,7 @@ bool CppDataLoggerComponent::Init()
 	}
 	else
 	{
-		Log::Error("[CppDataLoggerComponent] ServiceManager::GetService<IDataLoggerService>() returned error");
+		Log::Error("[CppDataLoggerComponent] ServiceManager::GetService<IDataLoggerService2>() returned error");
 	}
 	return(bRet);
 }
@@ -192,8 +181,8 @@ ErrorCode CppDataLoggerComponent::ReadVariablesDataToByte(const Arp::String& ses
     const Arp::DateTime& startTime, const Arp::DateTime& endTime,
     const std::vector<Arp::String>& variableNames, uint8* byteMemory)
 {
-    IDataLoggerService::ReadVariablesDataValuesDelegate readValuesDelegate =
-        IDataLoggerService::ReadVariablesDataValuesDelegate::create([&](
+    IDataLoggerService2::ReadVariablesDataValuesDelegate readValuesDelegate =
+        IDataLoggerService2::ReadVariablesDataValuesDelegate::create([&](
             IRscReadEnumerator<RscVariant<512>>& readEnumerator)
     {
     	size_t r_offset = 0; 						//reinitialize the r_offset
@@ -275,8 +264,16 @@ ErrorCode CppDataLoggerComponent::ReadVariablesDataToByte(const Arp::String& ses
 						}
 					 }
 					 break;
+					 
+					 case RscType::Uint8:
+					 {
+						valueTmp.CopyTo(*((uint8*)(byteMemory + r_offset))); //Is only relevant for trigger-based data acquisition.
+																			 //The field indicates to which recording cycle the respective data record belongs.
+						r_offset += 1; //increment the offset
+					 }
+					 break;
 
-                 default:
+                     default:
                      break;
                  }
                }
@@ -294,7 +291,7 @@ ErrorCode CppDataLoggerComponent::ReadVariablesDataToByte(const Arp::String& ses
             endTime,
 
    // This is the Delegate for the transmission of VariableNames
-   IDataLoggerService::ReadVariablesDataVariableNamesDelegate::create([&](
+   IDataLoggerService2::ReadVariablesDataVariableNamesDelegate::create([&](
          IRscWriteEnumerator<RscString<512>>& writeEnumerator)
 		 {
             writeEnumerator.BeginWrite(variableNames.size());
@@ -315,9 +312,9 @@ void CppDataLoggerComponent::workerThreadBody(void) {
 	if(!m_bInitialized) // If not initialized
 	{
 		//Set the startTime 1 second earlier as DateTime::Now().
-		Arp::Microseconds ticksNow(DateTime::Now().ToUnixMicrosecondTicks());
-		startTime = Arp::DateTime::FromUnixMicrosecondTicks((ticksNow - Arp::Seconds(1)).count());
-		//Log::Info("startTime: {0}", startTime.ToBinary());
+		Arp::Microseconds ticksNow(DateTime::Now().ToUnixTimeMicroseconds());
+		startTime = Arp::DateTime::FromUnixTimeMicroseconds((ticksNow - Arp::Seconds(1)).count());
+		Log::Info("startTime: {0}", startTime.ToBinary());
 
 		Init();  //Call Init() function
 	}
@@ -336,3 +333,4 @@ void CppDataLoggerComponent::workerThreadBody(void) {
 		}
 	}
 } // end of namespace CppDataLogger
+

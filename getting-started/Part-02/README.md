@@ -8,7 +8,7 @@ For datalogger configuration you have proceed the following steps. If the detail
 
 1.	Clone the folder Services onto your host machine
 2.	Copy the folder /Services/DataLogger to your PLCnext Control with e.g. WinSCP into the directory /opt/plcnext/projects/ 
-3.	Now open the /opt/plcnext/projects/Services/DataLogger/data-logger.config with an editor and modify the settings according to your use case (please refer the comments in the file).
+3.	Now open the /opt/plcnext/projects/Services/DataLogger/data-logger.dl.config with an editor and modify the settings according to your use case (please refer the comments in the file).
 4.	Save the file and restart the PLCnext Control (via PLCnext Engineer or shell sudo /etc/init.d/plcnext restart)
 5.	The log files will now be available in the directory /opt/plcnext/projects/Services/DataLogger/ and can be copied via SFTP (e.g. with WinSCP).
 	All files are stored in a SQLlite format and can be used with every SQLlite compatible viewer.
@@ -59,27 +59,29 @@ Please follow these instructions for that:
 ---
 
 
-![IEC_Program](Picture/07_DataLoggerConfiguration.png)
+![IEC_Program](/Picture/07_DataLoggerConfiguration.png)
 
 •	Placing the DataLogger configuration file on the target
-1.	Open the „/DataLogger/configfile/“ directory on the host machine to find the „data-logger.config” file
+1.	Open the „/DataLogger/configfile/“ directory on the host machine to find the „data-logger.dl.config” file
 2.	Establish a connection to the PLCnext target via WinSCP
 3.	In „/opt/plcnext/projects/”, create this path: “/Services/DataLogger“
-4.	Copy the „data-logger.config” file into the „/opt/plcnext/projects/Services/DataLogger“ path
+4.	Copy the „data-logger.dl.config” file into the „/opt/plcnext/projects/Services/DataLogger“ path
 
 
 
 ---
 
 
-![IEC_Program](Picture/08_LogPortVariableList.png)
+![IEC_Program](/Picture/08_1_LogPortVariableList.png)
 
-•	Creating a Log Variable list in the „data-logger.config“ file
+![IEC_Program](/Picture/08_2_LogPortVariableList.png)
+
+•	Creating a Log Variable list in the „data-logger.dl.config“ file
 1.	In the „/opt/plcnext/projects/PCWE/Plc/Gds/“ folder on the PLCnext target, open the „PCWE.gds.config“ file
-2.	In the „/opt/plcnext/projects/Services/DataLogger/“ folder on the PLCnext target, open the „data-logger.config“ file
+2.	In the „/opt/plcnext/projects/Services/DataLogger/“ folder on the PLCnext target, open the „data-logger.dl.config“ file
 3.	In the „PCWE.gds.config“ file, copy the variable name from the <Connectors> section
-4.	In the „data-logger.config“ file, paste the variable name into the <Variables> section
-5.	Save the edited „data-logger.config“ file
+4.	In the „data-logger.dl.config“ file, paste the variable name into the <Variables> section
+5.	Save the edited „data-logger.dl.config“ file
 6.	Restart the PLCnext target
 
 
@@ -87,10 +89,10 @@ Please follow these instructions for that:
 ---
 
 
-![IEC_Program](Picture/09_LocationSQLiteDB.png)
+![IEC_Program](/Picture/09_LocationSQLiteDB.png)
 
 •	Where to find the SQLite databases on the PLCnext target
-1.	Find the SQLite databases in the folder defined in „data-logger.config“ by a <Datasink> entry. The default value is "/opt/plcnext/logs/DataSink.db".
+1.	Find the SQLite databases in the folder defined in „data-logger.dl.config“ by a <Datasink> entry. The default value is "/opt/plcnext/logs/DataSink.db".
 
 
 

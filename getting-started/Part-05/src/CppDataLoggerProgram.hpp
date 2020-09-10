@@ -1,16 +1,4 @@
-﻿ /******************************************************************************
- *
- *  Copyright (c) Phoenix Contact GmbH & Co. KG. All rights reserved.
- *	Licensed under the MIT. See LICENSE file in the project root for full license information.
- *
- *  CppDataLoggerProgram.hpp
- *
- *  Created on: Jun, 2019
- *      Author: Eduard Muenz
- *
- ******************************************************************************/
-
-#pragma once
+﻿#pragma once
 #include "Arp/System/Core/Arp.h"
 #include "Arp/Plc/Commons/Esm/ProgramBase.hpp"
 #include "Arp/System/Commons/Logging.h"
@@ -56,6 +44,7 @@ public: /* Ports
 
 private: // fields
     CppDataLogger::CppDataLoggerComponent& cppDataLoggerComponent;
+
 };
 
 ///////////////////////////////////////////////////////////////////////////////
