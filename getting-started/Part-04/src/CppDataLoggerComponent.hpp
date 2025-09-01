@@ -29,6 +29,7 @@ using namespace Arp;
 using namespace Arp::System::Acf;
 using namespace Arp::Plc::Commons::Esm;
 using namespace Arp::Plc::Commons::Meta;
+using namespace Arp::System::Commons::Threading;
 
 using namespace Arp::System::Rsc;
 using namespace Arp::System::Rsc::Services;
@@ -128,3 +129,4 @@ inline IComponent::Ptr CppDataLoggerComponent::Create(Arp::System::Acf::IApplica
 }
 
 } // end of namespace CppDataLogger
+
