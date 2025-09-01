@@ -52,6 +52,7 @@ using namespace Arp::Services::DataLogger::Services;
 using namespace Arp::System::Acf;
 using namespace Arp::Plc::Commons::Esm;
 using namespace Arp::Plc::Commons::Meta;
+using namespace Arp::System::Commons::Threading;
 
 //#component
 class CppDataLoggerComponent
@@ -181,3 +182,4 @@ inline IComponent::Ptr CppDataLoggerComponent::Create(Arp::System::Acf::IApplica
 }
 
 } // end of namespace CppDataLogger
+
