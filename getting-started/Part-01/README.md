@@ -1,4 +1,4 @@
-This is part of a [series of articles](https://github.com/PLCnext/plcnext-real-time-datalogger) that demonstrate how to implement a DataLogger application based on the DataLogger service provided by the PLCnext Control firmware.  Each article builds on tasks that were completed in earlier articles, so it is recommended to follow the series in sequence.
+This is part of a [series of articles](https://github.com/PLCnext/PLCnext_RT_Datalogger) that demonstrate how to implement a DataLogger application based on the DataLogger service provided by the PLCnext Control firmware.  Each article builds on tasks that were completed in earlier articles, so it is recommended to follow the series in sequence.
 In this use case IO signals of the local bus shall be recorded in a bussynchrinious manner.
 
 ## Part 1 - PLCnext Engineer Project
@@ -14,6 +14,8 @@ In this article, we will create a simple PLCnext Engineer project that we will u
 
 - AXIO local bus configuration 
 
+- Configuring the Data Logger session
+
 ---
 
 ### Procedure
@@ -28,8 +30,8 @@ Please follow these instructions for that:
 
 •	Defining the variables
 1.	Create an IEC Program “DIO_Producer” in the „Components“ area
-2.	Select the „Variables“ tab and create the port variables with “bool” datatype 
-and “IN Port” usage for the signals
+2.	Select the „Variables“ tab
+3.  Create the port variables with “bool” datatype and “IN Port” usage for the signals
 
 
 
@@ -79,7 +81,18 @@ and “IN Port” usage for the signals
 
 ---
 
-![CyclicTask](/Picture/06_Download_PLCnEngProj.png)
+![CyclicTask](/Picture/06_DataLoggerConfiguration.png)
+
+•	Configuring the Data Logger „test-session“
+1.	Select the „Data Logger Sessions“ tab
+2.	Change the Timestamp Format to „ISO8601“
+3.	Insert the variables „DIO_Producer1.IN_DI_001“ - "DIO_Producer1.IN_DI_008“ via the „Rule Picker“ to the datalogger „test-session“
+
+
+
+---
+
+![CyclicTask](/Picture/07_Download_PLCnEngProj.png)
 
 •	Downloading the PLCnext Engineer Project to the PLCnext target
 1.	Open the „axc-f-2152-1“ node in the „PLANT“ area

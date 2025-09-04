@@ -25,8 +25,6 @@
 #include "Arp/Services/DataLogger/Services/ErrorCode.hpp"
 #include "Arp/Plc/Gds/Services/VariableInfo.hpp"
 
-#include <mutex>
-
 namespace CppDataLogger
 {
 
@@ -90,10 +88,6 @@ public: // static factory operations
     void workerThreadBody(void);
     bool Init();
 
-    ErrorCode ReadVariablesDataToByte(const Arp::String& sessionName,
-        const Arp::DateTime& startTime, const Arp::DateTime& endTime,
-        const std::vector<Arp::String>& variableNames, uint8* byteMemory);
-
 private: // fields
     CppDataLoggerComponentProgramProvider programProvider;
 
@@ -104,42 +98,6 @@ private: // fields
 
     // IDataLoggerService Handle
     IDataLoggerService2::Ptr m_pDataLoggerService;
-
-    //Session Name
-    Arp::String sessionname = {};
-
-    //Vector for Variable Names, sorted by name. This vector will be necessary in the next part of this article
-    std::vector<Arp::String> CountingVariableNames = {};
-
-    //Start and End time as time window parameter
-    Arp::DateTime startTime;
-    Arp::DateTime endTime;
-
-    //Define the buffer for the records. Please note, if the memory is not enough the storage will be written beyond the array limits!
-    uint8 m_records[10] = { 0 };
-
-    //struct definition
-    struct SaveToQueue {
-        uint8 byteRecord[512] = { 0 }; // (8Byte TimeStamp + 8Byte Data)
-    };
-
-    uint8 MaxLogVar = 50; //max. Number of LogVariables inside one PN Telegram: (PN-TelegramSize-TimeStamp)/(LogVarID + LogVarValue + LogVarEvetnCnt)
-    //max. Number of LogVariables inside one PN Telegram: (512Byte - 8Byte)/(1Byte + 1Byte + 8Byte) = 50
-
-//newRecord declaration
-    SaveToQueue newRecord;
-
-    //mutex declaration
-    std::mutex myLock;
-    std::deque<SaveToQueue> toQueue;
-     
-
-    bool m_QueueOverflowWarning = 0;
-    bool m_QueueOverflowError = 0;
-
-
-public:   // IProgramComponent operations
-    uint32 GetRecord(uint8* byteRecord, bool& b_PN_DataValidBit); //will be called in program execution
 
 public: /* Ports
            =====

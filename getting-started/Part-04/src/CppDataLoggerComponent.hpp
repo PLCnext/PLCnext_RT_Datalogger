@@ -1,10 +1,13 @@
-﻿#pragma once
+#pragma once
 #include "Arp/System/Core/Arp.h"
+#if ARP_ABI_VERSION_MAJOR < 2
 #include "Arp/System/Acf/ComponentBase.hpp"
 #include "Arp/System/Acf/IApplication.hpp"
+#else
+#include "Arp/Base/Acf/Commons/ComponentBase.hpp"
+#endif
 #include "Arp/Plc/Commons/Esm/ProgramComponentBase.hpp"
 #include "CppDataLoggerComponentProgramProvider.hpp"
-#include "CppDataLoggerLibrary.hpp"
 #include "Arp/Plc/Commons/Meta/MetaLibraryBase.hpp"
 #include "Arp/System/Commons/Logging.h"
 
@@ -26,37 +29,45 @@ namespace CppDataLogger
 {
 
 using namespace Arp;
+#if ARP_ABI_VERSION_MAJOR < 2
 using namespace Arp::System::Acf;
+#else
+using namespace Arp::Base::Acf::Commons;
+#endif
 using namespace Arp::Plc::Commons::Esm;
 using namespace Arp::Plc::Commons::Meta;
+using namespace Arp::System::Commons::Threading;
 
 using namespace Arp::System::Rsc;
 using namespace Arp::System::Rsc::Services;
 using namespace Arp::Plc::Gds::Services;
 using namespace Arp::Services::DataLogger::Services;
+using namespace Arp::Base::Commons::Logging;
 
-using namespace Arp::System::Acf;
-using namespace Arp::Plc::Commons::Esm;
-using namespace Arp::Plc::Commons::Meta;
 
 //#component
-class CppDataLoggerComponent
-		: public ComponentBase
-		, public ProgramComponentBase
-		, private Loggable<CppDataLoggerComponent>
-		, public IControllerComponent
+class CppDataLoggerComponent 
+    : public ComponentBase
+    , public ProgramComponentBase
+    , private Loggable<CppDataLoggerComponent>
+    , public IControllerComponent
 {
 public: // typedefs
 
 public: // construction/destruction
+#if ARP_ABI_VERSION_MAJOR < 2
     CppDataLoggerComponent(IApplication& application, const String& name);
     virtual ~CppDataLoggerComponent() = default;
+#else
+    CppDataLoggerComponent(ILibrary& library, const String& name);
+#endif
 
 public: // IComponent operations
     void Initialize() override;
     void LoadConfig() override;
     void SetupConfig() override;
     void ResetConfig() override;
+    void PowerDown() override;
 
 public: // IControllerComponent operations
     void Start(void)override;
@@ -66,43 +77,74 @@ public: // ProgramComponentBase operations
     void RegisterComponentPorts() override;
 
 private: // methods
+#if ARP_ABI_VERSION_MAJOR < 2
     CppDataLoggerComponent(const CppDataLoggerComponent& arg) = delete;
     CppDataLoggerComponent& operator= (const CppDataLoggerComponent& arg) = delete;
+
+public: // static factory operations
+    static IComponent::Ptr Create(Arp::System::Acf::IApplication& application, const String& name);
+#endif
 
     void workerThreadBody(void);
     bool Init();
 
-public: // static factory operations
-    static IComponent::Ptr Create(Arp::System::Acf::IApplication& application, const String& name);
+    ErrorCode ReadVariablesDataToByte(const Arp::String& sessionName,
+        const Arp::DateTime& startTime, const Arp::DateTime& endTime,
+        const std::vector<Arp::String>& variableNames, uint8* byteMemory);
 
 private: // fields
     CppDataLoggerComponentProgramProvider programProvider;
 
-    	  //Worker Thread
-          WorkerThread workerThreadInstance;
-          bool xStopThread = false;
-          bool m_bInitialized = false;	// class already initialized?
+    //Worker Thread
+    WorkerThread workerThreadInstance;
+    bool xStopThread = false;
+    bool m_bInitialized = false;	// class already initialized?
 
-          // IDataLoggerService Handle
-          IDataLoggerService2::Ptr m_pDataLoggerService;
+    // IDataLoggerService Handle
+    IDataLoggerService2::Ptr m_pDataLoggerService;
+
+    //Session Name
+    Arp::String sessionname = {};
+
+    //Vector for Variable Names, sorted by name. This vector will be necessary in the next part of this article
+    std::vector<Arp::String> CountingVariableNames = {};
+
+    //Start and End time as time window parameter
+    Arp::DateTime startTime;
+    Arp::DateTime endTime;
+
+    //Define the buffer for the records. Please note, this code is very critical because,
+    //if the memory is not enough the storage will be written beyond the array limits!
+    uint8 m_records[2578000];
+
 
 public: /* Ports
            =====
            Component ports are defined in the following way:
 
-           //#port
            //#attributes(Hidden)
-           struct PORTS {
+           struct Ports 
+           {
                //#name(NameOfPort)
                //#attributes(Input|Retain|Opc)
                Arp::boolean portField = false;
                // The GDS name is "<componentName>/NameOfPort" if the struct is declared as Hidden
                // otherwise the GDS name is "<componentName>/PORTS.NameOfPort"
-           } ports;
+			   // If a component port is attributed with "Retain" additional measures need to be implemented. Fur further details refer to chapter "Component ports" in the topic "IComponent and IProgram" of https://www.plcnext.help
+           };
+           
+           //#port
+           Ports ports;
 
            Create one (and only one) instance of this struct.
-           Apart from this single struct instance, there must be no other Component variables declared with the #port comment.
-           The only attribute that is allowed on the struct instance is "Hidden", and this is optional.
+           Apart from this single struct instance, it is recommended, that there should be no other Component variables 
+           declared with the #port comment.
+           The only attribute that is allowed on the struct instance is "Hidden", and this is optional. The attribute
+           will hide the structure field and simulate that the struct fields are direct ports of the component. In the
+           above example that would mean the component has only one port with the name "NameOfPort".
+           When there are two struts with the attribute "Hidden" and both structs have a field with the same name, there
+           will be an exception in the firmware. That is why only one struct is recommended. If multiple structs need to
+           be used the "Hidden" attribute should be omitted.
            The struct can contain as many members as necessary.
            The #name comment can be applied to each member of the struct, and is optional.
            The #name comment defines the GDS name of an individual port element. If omitted, the member variable name is used as the GDS name.
@@ -110,21 +152,11 @@ public: /* Ports
         */
 };
 
-///////////////////////////////////////////////////////////////////////////////
-// inline methods of class CppDataLoggerComponent
-inline CppDataLoggerComponent::CppDataLoggerComponent(IApplication& application, const String& name)
-: ComponentBase(application, ::CppDataLogger::CppDataLoggerLibrary::GetInstance(), name, ComponentCategory::Custom)
-, programProvider(*this)
-, ProgramComponentBase(::CppDataLogger::CppDataLoggerLibrary::GetInstance().GetNamespace(), programProvider)
 
-// ADDED: Worker Thread
-, workerThreadInstance(make_delegate(this, &CppDataLoggerComponent::workerThreadBody) , 100, "WorkerThreadName")
-{
-}
-
+#if ARP_ABI_VERSION_MAJOR < 2
 inline IComponent::Ptr CppDataLoggerComponent::Create(Arp::System::Acf::IApplication& application, const String& name)
 {
     return IComponent::Ptr(new CppDataLoggerComponent(application, name));
 }
-
+#endif
 } // end of namespace CppDataLogger

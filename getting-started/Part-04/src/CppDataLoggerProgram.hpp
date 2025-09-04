@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 #include "Arp/System/Core/Arp.h"
 #include "Arp/Plc/Commons/Esm/ProgramBase.hpp"
 #include "Arp/System/Commons/Logging.h"
@@ -19,11 +19,15 @@ public: // typedefs
 
 public: // construction/destruction
     CppDataLoggerProgram(CppDataLogger::CppDataLoggerComponent& cppDataLoggerComponentArg, const String& name);
+#if ARP_ABI_VERSION_MAJOR < 2
     CppDataLoggerProgram(const CppDataLoggerProgram& arg) = delete;
     virtual ~CppDataLoggerProgram() = default;
+#endif
 
 public: // operators
+#if ARP_ABI_VERSION_MAJOR < 2
     CppDataLoggerProgram&  operator=(const CppDataLoggerProgram& arg) = delete;
+#endif
 
 public: // properties
 
@@ -53,7 +57,7 @@ inline CppDataLoggerProgram::CppDataLoggerProgram(CppDataLogger::CppDataLoggerCo
 : ProgramBase(name)
 , cppDataLoggerComponent(cppDataLoggerComponentArg)
 {
-	Log::Info("DL Constructor");
+    log.Info("[CppDataLoggerProgram]---------------------------------DL Constructor");
 }
 
 } // end of namespace CppDataLogger
