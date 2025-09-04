@@ -1,5 +1,5 @@
 # MAINTAINER
 
-Frank Walde - OSSPLCnext@phoenixcontact.com
+Oliver Warneke - OSSPLCnext@phoenixcontact.com
 
 Marcel Luhmann - OSSPLCnext@phoenixcontact.com
