@@ -22,6 +22,10 @@ For data transmission via PROFINET, we have to implement the following additiona
  - The logged data in the queue should be provided to the real-time program for profinet data transmission.
  - If the max. queue size is reached, the oldest queue elements should be deleted (memory protection).
 
+Please find the application overview in the picture below:
+
+![Application Overview](/Picture/15_RT_DataLogger_app overview.png)
+
 
 1. Include into Project `CppDataLoggerComponent` the method " GetRecord" and execute this metod in real-time program "CppDataLoggerProgram" for data providing to Profinet send buffer:
  - Open and include following declaration of methods and fields into header file of component "CppDataLoggerComponent.hpp"
