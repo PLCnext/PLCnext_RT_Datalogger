@@ -4,8 +4,7 @@ This is part of a [series of articles](https://github.com/PLCnext/PLCnext_RT_Dat
 
 
 The example below prepare the logged data for PROFINET transmission to another PN-Device and provide the data via Port-Variable to the real-time program executed by ESM. In the folder "src" of this article you will find the completely implemented source code. If you don't have much time to implement the code yourself, you can replace the files in your Eclipse project with files in that src folder.
-
-If you don't have much time to create the PLCnext Engineer project or Datalogger cofiguration file yourself, you can find it in "PLCnEngDataLoggerProject" or "DataLoggerConfigFile" of this repository. Please note, you have to copy the "Service" folder in "DataLoggerConfigFile" in "/opt/plcnext/projects" folder on the plcnext target.
+The PLCnEng project must be expanded as showed in the steps/screenshots below.
 
 The goal of this Implementation:
  - 128 Bool variables (DI-Signals) should be logged by event-based logging configuration and saved into queue storage on plcnext target.
